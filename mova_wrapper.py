@@ -11,10 +11,46 @@ import sys
 from typing import Optional, Tuple
 
 import torch
+
+# === Workaround: Fix Lightning's torch.compile hijack before any MOVA imports ===
+# Lightning's wrapper has incompatible signature for @torch.compile(options) decorator usage
+_original_torch_compile = torch.compile
+_lightning_compile_fixed = False
+
+try:
+    import lightning.fabric.wrappers as lfw
+    if hasattr(lfw, '_capture'):
+        # Lightning is intercepting torch.compile, restore native version
+        if hasattr(torch, '_dynamo'):
+            import torch._dynamo
+            torch.compile = torch._dynamo.optimize
+            _lightning_compile_fixed = True
+            print("[MOVA] Fixed Lightning's torch.compile wrapper for decorator compatibility")
+except ImportError:
+    pass  # Lightning not installed
+# === End Workaround ===
+
 from PIL import Image
 
 
 _distributed_patched = False
+
+MOVA_INSTALL_HINT = (
+    "Install MOVA in the ComfyUI environment: "
+    "pip install git+https://github.com/OpenMOSS/MOVA.git "
+    "or clone MOVA repo and run: pip install -e /path/to/MOVA"
+)
+
+
+def _ensure_mova():
+    """Import mova pipeline; raise clear error with install hint if not installed.
+    
+    Note: torch.compile fix is done at module level (see top of file).
+    """
+    try:
+        from mova.diffusion.pipelines.pipeline_mova import MOVA  # noqa: F401
+    except ModuleNotFoundError as e:
+        raise RuntimeError(f"{e}. {MOVA_INSTALL_HINT}") from e
 
 
 def patch_torch_distributed():
@@ -94,8 +130,9 @@ def load_mova_pipeline(
         This function uses local_files_only=True to ensure fully offline operation.
         Models must be pre-downloaded to the specified path.
     """
+    _ensure_mova()
     from mova.diffusion.pipelines.pipeline_mova import MOVA
-    
+
     print(f"[MOVA] Loading model from {model_path}...")
     # Use local_files_only=True to prevent any download attempts (fully offline)
     pipe = MOVA.from_pretrained(model_path, torch_dtype=torch_dtype, local_files_only=True)
@@ -198,6 +235,7 @@ def run_mova_inference(
             pass
     
     # Temporarily replace tqdm in the pipeline module
+    _ensure_mova()
     import mova.diffusion.pipelines.pipeline_mova as pipeline_module
     old_tqdm = getattr(pipeline_module, 'tqdm', original_tqdm)
     pipeline_module.tqdm = ProgressTqdm if progress_callback else original_tqdm

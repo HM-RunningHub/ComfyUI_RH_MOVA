@@ -1,6 +1,8 @@
 # ComfyUI-MOVA Requirements
 # Note: Most dependencies should already be installed with ComfyUI
-# The MOVA model package (parent directory) must be installed: pip install -e ../
+# MOVA package must be installed in the same environment (e.g. test Docker):
+#   pip install git+https://github.com/OpenMOSS/MOVA.git
+# Or from local clone: pip install -e /path/to/MOVA
 
 # Core dependencies (usually already in ComfyUI)
 torch
