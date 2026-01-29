@@ -1,138 +1,203 @@
-# ComfyUI-MOVA
+# ComfyUI_RH_MOVA
 
-ComfyUI nodes for **MOVA** (MOSS Video and Audio) - a foundation model for synchronized video-audio generation.
+![License](https://img.shields.io/badge/License-Apache%202.0-green)
 
-## Features
+ComfyUI custom nodes for **MOVA** (MOSS Video and Audio) - a foundation model for synchronized video-audio generation with precise lip-sync.
+
+> Based on [OpenMOSS/MOVA](https://github.com/OpenMOSS/MOVA)
+
+## ✨ Features
 
 - **Native Bimodal Generation**: Generate video and synchronized audio in a single pass
 - **Precise Lip-Sync**: State-of-the-art multilingual lip synchronization
+- **Sound Effects**: Environment-aware sound effects generation
+- **Memory Efficient**: Support for RTX 4090 with group offload mode (~12GB VRAM)
 - **ComfyUI Integration**: Easy-to-use nodes for the ComfyUI workflow
 
-## Installation
+## 🛠️ Installation
 
-### 1. Install MOVA Package
-
-First, install the MOVA package from the parent directory:
+### Step 1: Clone this repository
 
 ```bash
-cd /path/to/MOVA
+cd ComfyUI/custom_nodes
+git clone https://github.com/HM-RunningHub/ComfyUI_RH_MOVA.git
+```
+
+### Step 2: Install MOVA package
+
+The MOVA package must be installed in ComfyUI's Python environment:
+
+```bash
+# Option A: Install from GitHub (recommended)
+pip install git+https://github.com/OpenMOSS/MOVA.git
+
+# Option B: Install from local clone
+git clone https://github.com/OpenMOSS/MOVA.git
+cd MOVA
 pip install -e .
 ```
 
-### 2. Install ComfyUI Node
-
-Copy or symlink the `ComfyUI-MOVA` folder to your ComfyUI custom_nodes directory:
+### Step 3: Install dependencies
 
 ```bash
-# Option 1: Symlink (recommended for development)
-ln -s /path/to/MOVA/ComfyUI-MOVA /path/to/ComfyUI/custom_nodes/ComfyUI-MOVA
-
-# Option 2: Copy
-cp -r /path/to/MOVA/ComfyUI-MOVA /path/to/ComfyUI/custom_nodes/
+cd ComfyUI/custom_nodes/ComfyUI_RH_MOVA
+pip install -r requirements.txt
 ```
 
-### 3. Download Model
+### Step 4: Install FFmpeg
 
-Download the MOVA model from HuggingFace and place it in `ComfyUI/models/MOVA/`:
+FFmpeg is required for video encoding with audio:
 
 ```bash
-# Using huggingface-cli
-huggingface-cli download OpenMOSS-Team/MOVA-360p --local-dir /path/to/ComfyUI/models/MOVA/MOVA-360p
+# Ubuntu/Debian
+sudo apt install ffmpeg
 
-# Or for 720p model (larger, higher quality)
-huggingface-cli download OpenMOSS-Team/MOVA-720p --local-dir /path/to/ComfyUI/models/MOVA/MOVA-720p
+# Windows (using chocolatey)
+choco install ffmpeg
+
+# macOS
+brew install ffmpeg
 ```
 
-## Nodes
+## 📦 Model Download
 
-### MOVA Model Loader
+Download MOVA models from HuggingFace and place them in the correct directory.
+
+### Model Directory Structure
+
+```
+ComfyUI/
+└── models/
+    └── MOVA/                          # ← Create this folder
+        ├── MOVA-360p/                 # 360p model (smaller, faster)
+        │   ├── model_index.json
+        │   ├── scheduler/
+        │   ├── text_encoder/
+        │   ├── tokenizer/
+        │   ├── video_dit/
+        │   ├── video_dit_2/
+        │   ├── audio_dit/
+        │   ├── vae_2d/
+        │   └── ...
+        └── MOVA-720p/                 # 720p model (larger, higher quality)
+            └── ...
+```
+
+### Download Commands
+
+```bash
+# Create the MOVA models directory
+mkdir -p ComfyUI/models/MOVA
+
+# Download 360p model (recommended for RTX 4090)
+huggingface-cli download OpenMOSS-Team/MOVA-360p --local-dir ComfyUI/models/MOVA/MOVA-360p
+
+# Or download 720p model (higher quality, requires more VRAM)
+huggingface-cli download OpenMOSS-Team/MOVA-720p --local-dir ComfyUI/models/MOVA/MOVA-720p
+```
+
+### Alternative: Manual Download
+
+1. Visit [https://huggingface.co/OpenMOSS-Team/MOVA-360p](https://huggingface.co/OpenMOSS-Team/MOVA-360p)
+2. Click "Files and versions" tab
+3. Download all files and folders
+4. Place them in `ComfyUI/models/MOVA/MOVA-360p/`
+
+## 🚀 Nodes
+
+### RunningHub MOVA Loader
 
 Loads the MOVA model with configurable memory management.
 
-**Inputs:**
-- `model_name`: Select from available models in ComfyUI/models/MOVA/
-- `offload_mode`: Memory management strategy
-  - `group`: Lowest VRAM usage (~12GB) - recommended for RTX 4090
-  - `cpu`: Medium VRAM usage (~48GB)
-  - `none`: Loads everything to GPU (requires high VRAM)
-- `dtype`: Model precision (bfloat16 recommended)
+| Parameter | Description |
+|-----------|-------------|
+| `model_name` | Select from available models in `ComfyUI/models/MOVA/` |
+| `offload_mode` | Memory strategy: `group` (~12GB VRAM), `cpu` (~48GB VRAM), `none` (full GPU) |
+| `dtype` | Model precision: `bfloat16` (recommended), `float16`, `float32` |
 
-**Outputs:**
-- `mova_model`: Model object for use with MOVA Sampler
-
-### MOVA Sampler
+### RunningHub MOVA Sampler
 
 Generates synchronized video and audio from a reference image and text prompt.
 
-**Inputs:**
-- `mova_model`: Model from MOVA Model Loader
-- `reference_image`: Reference image (will be cropped/resized)
-- `prompt`: Text description including speech in quotes
-- `width/height`: Output video dimensions (auto-adjusted to be divisible by 16)
-- `num_frames`: Number of frames (97 frames ≈ 4 seconds at 24fps)
-- `fps`: Frame rate
-- `steps`: Denoising steps (10-25 recommended)
-- `cfg_scale`: Guidance scale
-- `seed`: Random seed
+| Parameter | Description |
+|-----------|-------------|
+| `pipeline` | MOVA pipeline from Loader |
+| `reference_image` | Reference image (person/scene) |
+| `prompt` | Text description with speech in quotes |
+| `width/height` | Output dimensions (auto-adjusted to be divisible by 16) |
+| `num_frames` | Frame count (97 frames ≈ 4 seconds at 24fps) |
+| `fps` | Frame rate |
+| `steps` | Denoising steps (10-25 recommended) |
+| `cfg_scale` | Guidance scale |
+| `seed` | Random seed for reproducibility |
 
-**Outputs:**
-- `video_frames`: Video frames as IMAGE tensor
-- `audio`: Audio as AUDIO dict
+**Output**: VIDEO object with synchronized audio
 
-## Usage Tips
-
-### Prompt Format
+## 📝 Prompt Format
 
 For best results, describe the scene and use quotes for speech:
 
 ```
-A man in a blue blazer speaks in a formal indoor setting. 
+A man in a blue blazer speaks in a formal indoor setting.
 He says, "I would also say that this election wasn't surprising."
 ```
 
-### Dimension Requirements
+For multi-person scenes:
 
-- Width and height must be divisible by 16
-- num_frames - 1 must be divisible by 4
-- The nodes auto-adjust values if needed
+```
+The scene shows a man and a child walking through a park.
+The man asks, "What do you want to do when you grow up?"
+The boy answers, "A bond trader."
+```
 
-### Memory Requirements
+## 💻 Hardware Requirements
 
 | Offload Mode | VRAM | Host RAM | Recommended GPU |
 |--------------|------|----------|-----------------|
-| group | ~12GB | ~77GB | RTX 4090 |
-| cpu | ~48GB | ~67GB | H100/A100 |
-| none | ~80GB+ | Minimal | Multi-GPU |
+| `group` | ~12GB | ~77GB | RTX 4090 |
+| `cpu` | ~48GB | ~67GB | H100/A100 |
+| `none` | ~80GB+ | Minimal | Multi-GPU |
 
-## Example Workflow
+### Performance Reference (8s 360p video)
 
-1. **Load Image** → Load reference image of a person
-2. **MOVA Model Loader** → Load model with `group` offload for RTX 4090
-3. **MOVA Sampler** → Generate video with prompt
-4. **VHS Video Combine** → Combine frames and audio into video file
+| Hardware | Offload | Step Time |
+|----------|---------|-----------|
+| RTX 4090 | group | ~42s |
+| RTX 4090 | cpu | ~38s |
+| H100 | group | ~23s |
+| H100 | cpu | ~9s |
 
-## Troubleshooting
+## 🔧 Troubleshooting
 
 ### "No models found"
 
-Place MOVA model in `ComfyUI/models/MOVA/MODEL_NAME/`. The folder should contain `model_index.json`.
+Ensure models are placed correctly:
+```
+ComfyUI/models/MOVA/MOVA-360p/model_index.json  ← This file must exist
+```
 
 ### Out of Memory
 
-- Use `group` offload mode
-- Reduce resolution (e.g., 352x640)
-- Reduce num_frames (e.g., 49 frames)
-- Enable `remove_video_dit` option
+- Use `group` offload mode (lowest VRAM)
+- Reduce resolution (e.g., 352x640 for 360p)
+- Reduce `num_frames` (e.g., 49 frames for ~2 seconds)
+- Enable `remove_video_dit` option to save ~28GB Host RAM
 
-### Module Not Found
+### Module Not Found: mova
 
-Make sure MOVA is installed: `pip install -e /path/to/MOVA`
+```bash
+pip install git+https://github.com/OpenMOSS/MOVA.git
+```
 
-## License
+### FFmpeg not found
 
-Apache 2.0 - Same as MOVA
+Install FFmpeg for your system (see Installation Step 4).
 
-## Credits
+## 📄 License
+
+Apache 2.0 - Same as [MOVA](https://github.com/OpenMOSS/MOVA)
+
+## 🙏 Credits
 
 - [MOVA](https://github.com/OpenMOSS/MOVA) by OpenMOSS Team
 - [ComfyUI](https://github.com/comfyanonymous/ComfyUI) by comfyanonymous
