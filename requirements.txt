@@ -1,0 +1,22 @@
+# ComfyUI-MOVA Requirements
+# Note: Most dependencies should already be installed with ComfyUI
+# The MOVA model package (parent directory) must be installed: pip install -e ../
+
+# Core dependencies (usually already in ComfyUI)
+torch
+torchvision
+pillow
+numpy
+tqdm
+
+# MOVA-specific dependencies
+accelerate
+diffusers
+transformers<5
+mmengine
+yunchang
+ftfy
+descript-audiotools
+einops
+imageio
+imageio-ffmpeg
