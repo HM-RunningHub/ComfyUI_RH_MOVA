@@ -1,0 +1,65 @@
+{
+  "4": {
+    "inputs": {
+      "image": "your_reference_image.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "9": {
+    "inputs": {
+      "model_name": "MOVA-360p",
+      "offload_mode": "group",
+      "dtype": "bfloat16"
+    },
+    "class_type": "RunningHub_MOVA_Loader",
+    "_meta": {
+      "title": "RunningHub MOVA Loader"
+    }
+  },
+  "10": {
+    "inputs": {
+      "filename_prefix": "video/ComfyUI",
+      "format": "auto",
+      "codec": "auto",
+      "fw_video_preview": "",
+      "video": [
+        "11",
+        0
+      ]
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "💾 Save Video"
+    }
+  },
+  "11": {
+    "inputs": {
+      "prompt": "A person speaks naturally in a casual setting. They say, \"Hello, this is a test of the MOVA video generation system.\"",
+      "width": 352,
+      "height": 640,
+      "num_frames": 97,
+      "fps": 24,
+      "steps": 25,
+      "cfg_scale": 5,
+      "seed": 42,
+      "negative_prompt": "",
+      "sigma_shift": 5,
+      "remove_video_dit": false,
+      "pipeline": [
+        "9",
+        0
+      ],
+      "reference_image": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "RunningHub_MOVA_Sampler",
+    "_meta": {
+      "title": "RunningHub MOVA Sampler"
+    }
+  }
+}

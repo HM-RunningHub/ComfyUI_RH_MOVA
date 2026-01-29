@@ -133,6 +133,25 @@ Generates synchronized video and audio from a reference image and text prompt.
 
 **Output**: VIDEO object with synchronized audio
 
+## 📂 Example Workflow
+
+An example workflow is provided in the `workflows/` folder:
+
+- **[mova_basic_example.json](workflows/mova_basic_example.json)** - Basic workflow for generating talking head video
+
+### How to use:
+
+1. In ComfyUI, drag and drop the JSON file into the canvas, or use "Load" to import
+2. Replace `your_reference_image.jpg` with your own image
+3. Modify the prompt text (use quotes for speech content)
+4. Click "Queue Prompt" to generate
+
+### Workflow Structure:
+
+```
+LoadImage → RunningHub MOVA Loader → RunningHub MOVA Sampler → Save Video
+```
+
 ## 📝 Prompt Format
 
 For best results, describe the scene and use quotes for speech:
